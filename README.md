@@ -1,6 +1,6 @@
 # AgentskiFront
 
-projekat otvoriti u vsCode
+projekat otvoriti u vsCode <br>
 npm install - komanda da instalira biblioteke
 npm run start- da pokrene server
 Ctrl + c - da ugasi server
