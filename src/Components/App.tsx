@@ -2,6 +2,7 @@ import React from 'react';
 import { Component } from 'react';
 import axios from 'axios';
 import AgentWrapper from '../Models/AgentWrapper';
+import uuidv4 from 'uuid/v4';
 
 interface IAgentState{
   messageTypes: string[];
@@ -14,6 +15,9 @@ interface IAgentState{
   createInstanceClass: string;
   createInstanceName: string;
   selectedMessageType: string;
+  sender: string;
+  reciever: string;
+  message: string;
 }
 
  class App extends Component<any, IAgentState>{
@@ -30,7 +34,10 @@ interface IAgentState{
       loggerSocket : new WebSocket('ws://localhost:8080/AgentTechnology/logger'),
       createInstanceClass : '',
       createInstanceName : '',
-      selectedMessageType: ''
+      selectedMessageType: '',
+      sender: '',
+      reciever: '',
+      message: ''
     }
 
     this.state.classesSocket.onmessage = evt => {
@@ -49,6 +56,19 @@ interface IAgentState{
       this.setState({
       	runningAgents : JSON.parse(evt.data).list
       })
+
+      if(this.state.runningAgents.length > 0){
+        this.setState({
+          sender : '0',
+          reciever : '0',
+        })
+      }
+      else{
+        this.setState({
+          sender : '',
+          reciever : '',
+        })
+      }
     }
 
     this.state.loggerSocket.onmessage = evt => {
@@ -58,6 +78,10 @@ interface IAgentState{
     this.handleCreateInstanceClassChange = this.handleCreateInstanceClassChange.bind(this);
     this.handleCreateInstanceNameChange = this.handleCreateInstanceNameChange.bind(this);
     this.handleSelectedMessageTypeChange = this.handleSelectedMessageTypeChange.bind(this);
+    this.handleSendMessage = this.handleSendMessage.bind(this);
+    this.handleSenderChange = this.handleSenderChange.bind(this);
+    this.handleRecieverChange = this.handleRecieverChange.bind(this);
+    this.handleMessageChange = this.handleMessageChange.bind(this);
     this.handleCreate = this.handleCreate.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
   }
@@ -109,6 +133,18 @@ interface IAgentState{
                 this.setState({
                   runningAgents: res.data.list
         });
+        if(this.state.runningAgents.length > 0){
+          this.setState({
+            sender : '0',
+            reciever : '0',
+          })
+        }      
+        else{
+          this.setState({
+            sender : '',
+            reciever : '',
+          })
+        }
     })
   }
 
@@ -121,6 +157,22 @@ interface IAgentState{
   private handleDelete(agentClass: string, agentName: string){
     let url = 'http://localhost:8080/AgentTechnology/rest/agents/running/'+agentClass+'/'+agentName;
     axios.delete(url);
+  }
+
+  private handleSendMessage(event:any){
+    event.preventDefault();
+    let url = 'http://localhost:8080/AgentTechnology/rest/messages';
+
+    let sender = this.state.runningAgents[Number(this.state.sender)];
+    let reciever = this.state.runningAgents[Number(this.state.reciever)];
+
+    axios.post(url,{
+        "performative": this.state.selectedMessageType,
+        "conversationID": uuidv4(),
+        "sender": sender.aid,
+        "receivers":[ reciever.aid]
+      }
+    );
   }
   
   private handleCreateInstanceClassChange(event: any) {
@@ -141,6 +193,23 @@ interface IAgentState{
     })
   }
 
+  private handleSenderChange(event: any) {
+    this.setState({
+        sender: event.target.value
+    })
+  }
+
+  private handleRecieverChange(event: any) {
+    this.setState({
+        reciever: event.target.value
+    })
+  }
+
+  private handleMessageChange(event: any) {
+    this.setState({
+        message: event.target.value
+    })
+  }
 
    public render(){
      return (
@@ -148,7 +217,7 @@ interface IAgentState{
       <h1>Classes</h1>
       <form onSubmit={this.handleCreate}>
         <select value={this.state.createInstanceClass} onChange={this.handleCreateInstanceClassChange}>
-        {this.state.classes.map(item => (
+        {this.state.classes.map((item) => (
           <option>{item}</option>
       ))}
         </select>
@@ -169,12 +238,30 @@ interface IAgentState{
       </table>
       <br/>
       <h1>Messages</h1>
-      <form>
+      <form onSubmit={this.handleSendMessage}>
+      <label>Sender: </label>
+        <select value={this.state.sender} onChange={this.handleSenderChange}>
+        {this.state.runningAgents.map((item,index) => (
+          <option value ={index}>{item.aid.name}</option>
+      ))}
+        </select>
+        <br/>
+        <label>Reciever: </label>
+        <select value={this.state.reciever} onChange={this.handleRecieverChange}>
+        {this.state.runningAgents.map((item,index) => (
+          <option value ={index}>{item.aid.name}</option>
+      ))}
+        </select>
+        <br/>
+        <label>Message type: </label>
         <select value={this.state.selectedMessageType} onChange={this.handleSelectedMessageTypeChange}>
         {this.state.messageTypes.map(item => (
           <option>{item}</option>
       ))}
         </select>
+        <br/>    
+        <input placeholder="Enter message..." value={this.state.message} onChange={this.handleMessageChange}></input>
+        <input type="submit" value="Submit" disabled={this.state.sender.trim()==="" || this.state.reciever.trim()==="" || this.state.message.trim() ==="" || this.state.selectedMessageType.trim() ===""}></input>
       </form>
       <br/>
       <h1>Logs</h1>
