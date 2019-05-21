@@ -2,6 +2,8 @@ import React from 'react';
 import { Component } from 'react';
 import axios from 'axios';
 import AgentWrapper from '../Models/AgentWrapper';
+import SearchResult from '../Models/SearchResult';
+import AID from '../Models/AID';
 import uuidv4 from 'uuid/v4';
 
 interface IAgentState{
@@ -10,6 +12,7 @@ interface IAgentState{
   classesSocket: WebSocket;
   runningAgents: AgentWrapper[];
   runningAgentsSocket: WebSocket;
+  searchResultsSocket: WebSocket;
   logs: string [];
   loggerSocket: WebSocket;
   createInstanceClass: string;
@@ -18,6 +21,17 @@ interface IAgentState{
   sender: string;
   reciever: string;
   message: string;
+  senderRequired: boolean;
+  messageRequired: boolean;
+  searchResults: SearchResult[];
+}
+
+interface IMessageData{
+  performative: string,
+  conversationID: string,
+  receivers: AID[],
+  sender?: AID,
+  content?: string
 }
 
  class App extends Component<any, IAgentState>{
@@ -32,12 +46,16 @@ interface IAgentState{
       runningAgentsSocket : new WebSocket('ws://localhost:8080/AgentTechnology/refreshRunningAgents'),
       logs : [],
       loggerSocket : new WebSocket('ws://localhost:8080/AgentTechnology/logger'),
+      searchResultsSocket : new WebSocket('ws://localhost:8080/AgentTechnology/searchResults'),
       createInstanceClass : '',
       createInstanceName : '',
       selectedMessageType: '',
       sender: '',
+      senderRequired: false,
+      searchResults: [],
       reciever: '',
-      message: ''
+      message: '',
+      messageRequired: false
     }
 
     this.state.classesSocket.onmessage = evt => {
@@ -75,12 +93,20 @@ interface IAgentState{
       this.state.logs.push(evt.data);
     }
 
+    this.state.searchResultsSocket.onmessage = evt => {
+      this.setState({
+        searchResults : JSON.parse(evt.data).list
+      })
+    }
+
     this.handleCreateInstanceClassChange = this.handleCreateInstanceClassChange.bind(this);
     this.handleCreateInstanceNameChange = this.handleCreateInstanceNameChange.bind(this);
     this.handleSelectedMessageTypeChange = this.handleSelectedMessageTypeChange.bind(this);
     this.handleSendMessage = this.handleSendMessage.bind(this);
     this.handleSenderChange = this.handleSenderChange.bind(this);
+    this.handleSenderRequiredChange = this.handleSenderRequiredChange.bind(this);
     this.handleRecieverChange = this.handleRecieverChange.bind(this);
+    this.handleMessageRequiredChange = this.handleMessageRequiredChange.bind(this);
     this.handleMessageChange = this.handleMessageChange.bind(this);
     this.handleCreate = this.handleCreate.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
@@ -165,14 +191,22 @@ interface IAgentState{
 
     let sender = this.state.runningAgents[Number(this.state.sender)];
     let reciever = this.state.runningAgents[Number(this.state.reciever)];
+    var data : IMessageData;
+    data = {
+      performative: this.state.selectedMessageType,
+      conversationID: uuidv4(),
+      receivers:[ reciever.aid]
+    }
 
-    axios.post(url,{
-        "performative": this.state.selectedMessageType,
-        "conversationID": uuidv4(),
-        "sender": sender.aid,
-        "receivers":[ reciever.aid]
-      }
-    );
+    if(this.state.senderRequired){
+      data.sender = sender.aid
+    }
+
+    if(this.state.messageRequired){
+      data.content = this.state.message
+    }
+
+    axios.post(url, data);
   }
   
   private handleCreateInstanceClassChange(event: any) {
@@ -193,6 +227,12 @@ interface IAgentState{
     })
   }
 
+  private handleSenderRequiredChange(event: any) {
+    this.setState({
+        senderRequired: event.target.checked
+    })
+  }
+
   private handleSenderChange(event: any) {
     this.setState({
         sender: event.target.value
@@ -202,6 +242,12 @@ interface IAgentState{
   private handleRecieverChange(event: any) {
     this.setState({
         reciever: event.target.value
+    })
+  }
+
+  private handleMessageRequiredChange(event: any) {
+    this.setState({
+        messageRequired: event.target.checked
     })
   }
 
@@ -240,7 +286,8 @@ interface IAgentState{
       <h1>Messages</h1>
       <form onSubmit={this.handleSendMessage}>
       <label>Sender: </label>
-        <select value={this.state.sender} onChange={this.handleSenderChange}>
+      <input type="checkbox" checked={this.state.senderRequired} onChange={this.handleSenderRequiredChange}></input>
+      <select value={this.state.sender} onChange={this.handleSenderChange} disabled={!this.state.senderRequired}>
         {this.state.runningAgents.map((item,index) => (
           <option value ={index}>{item.aid.name}</option>
       ))}
@@ -259,10 +306,26 @@ interface IAgentState{
           <option>{item}</option>
       ))}
         </select>
-        <br/>    
-        <input placeholder="Enter message..." value={this.state.message} onChange={this.handleMessageChange}></input>
-        <input type="submit" value="Submit" disabled={this.state.sender.trim()==="" || this.state.reciever.trim()==="" || this.state.message.trim() ==="" || this.state.selectedMessageType.trim() ===""}></input>
+        <br/>
+        <label>Message: </label>        
+        <input type="checkbox" checked={this.state.messageRequired} onChange={this.handleMessageRequiredChange}></input> 
+        <input placeholder="Enter message..." value={this.state.message} onChange={this.handleMessageChange} disabled={!this.state.messageRequired}></input>
+        <input type="submit" value="Submit" disabled={(this.state.sender.trim()==="" && this.state.senderRequired === true) || this.state.reciever.trim()==="" || (this.state.message.trim() ==="" && this.state.messageRequired === true) || this.state.selectedMessageType.trim() ===""}></input>
       </form>
+      <br/>
+      <h1>Search results</h1>
+      <table>
+        <tbody>
+        {this.state.searchResults.map(item =>(
+          <tr style={{backgroundColor:"#ACF3D3"}}>
+                <p style={{float : "left"}}>{item.name}</p>
+                <p style={{float : "right"}}>{item.url}</p>
+                <p style={{float : "left"}}>{item.description}</p>
+            <br/>
+          </tr>
+        ))}
+        </tbody>
+      </table> 
       <br/>
       <h1>Logs</h1>
       <ul>
