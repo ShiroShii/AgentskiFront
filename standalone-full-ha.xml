@@ -478,6 +478,7 @@
                 <jms-queue name="ExpiryQueue" entries="java:/jms/queue/ExpiryQueue"/>
                 <jms-queue name="AgentQueue" entries="java:jboss/exported/jms/queue/AgentQueue"/>
                 <jms-queue name="DLQ" entries="java:/jms/queue/DLQ"/>
+<jms-queue name="mojQueue" entries="jms/queue/mojQueue java:jboss/exported/jms/queue/mojQueue"/>
                 <connection-factory name="InVmConnectionFactory" entries="java:/ConnectionFactory" connectors="in-vm"/>
                 <connection-factory name="RemoteConnectionFactory" entries="java:jboss/exported/jms/RemoteConnectionFactory" connectors="http-connector" ha="true" block-on-acknowledge="true" reconnect-attempts="-1"/>
                 <pooled-connection-factory name="activemq-ra" entries="java:/JmsXA java:jboss/DefaultJMSConnectionFactory" connectors="in-vm" transaction="xa"/>
