@@ -41,12 +41,12 @@ interface IMessageData{
     this.state = {
       messageTypes : [],
       classes : [],
-      classesSocket: new WebSocket('ws://localhost:8080/AgentTechnology/refreshAgentClasses'),
+      classesSocket: new WebSocket('ws://'+this.getHostAddress()+'refreshAgentClasses'),
       runningAgents : [],
-      runningAgentsSocket : new WebSocket('ws://localhost:8080/AgentTechnology/refreshRunningAgents'),
+      runningAgentsSocket : new WebSocket('ws://'+this.getHostAddress()+'refreshRunningAgents'),
       logs : [],
-      loggerSocket : new WebSocket('ws://localhost:8080/AgentTechnology/logger'),
-      searchResultsSocket : new WebSocket('ws://localhost:8080/AgentTechnology/searchResults'),
+      loggerSocket : new WebSocket('ws://'+this.getHostAddress()+'logger'),
+      searchResultsSocket : new WebSocket('ws://'+this.getHostAddress()+'searchResults'),
       createInstanceClass : '',
       createInstanceName : '',
       selectedMessageType: '',
@@ -60,7 +60,7 @@ interface IMessageData{
 
     this.state.classesSocket.onmessage = evt => {
       this.setState({
-      	classesSocket : JSON.parse(evt.data).list
+      	classes : JSON.parse(evt.data).list
       })
 
       if(this.state.classes.length > 0 ){
@@ -90,7 +90,9 @@ interface IMessageData{
     }
 
     this.state.loggerSocket.onmessage = evt => {
-      this.state.logs.push(evt.data);
+      this.setState(prevState => ({
+        logs: [...prevState.logs, evt.data]
+      }))
     }
 
     this.state.searchResultsSocket.onmessage = evt => {
@@ -120,8 +122,13 @@ interface IMessageData{
     this.loadRunningAgents();
   }
 
+  private getHostAddress(){
+    var url : string = window.location.href;
+    return url.replace(/(^\w+:|^)\/\//, '');
+  }
+
   private loadMessageTypes(){
-    let url = 'http://localhost:8080/AgentTechnology/rest/messages';
+    let url = window.location.href+'rest/messages';
 
         axios.get(url)
             .then(res => {
@@ -137,7 +144,7 @@ interface IMessageData{
   }
 
   private loadClasses(){
-    let url = 'http://localhost:8080/AgentTechnology/rest/agents/classes/';
+    let url = window.location.href+'rest/agents/classes/';
 
         axios.get(url)
             .then(res => {
@@ -153,7 +160,7 @@ interface IMessageData{
   }
 
   private loadRunningAgents(){
-    let url = 'http://localhost:8080/AgentTechnology/rest/agents/running/';
+    let url = window.location.href+'rest/agents/running/';
 
         axios.get(url)
             .then(res => {
@@ -177,18 +184,18 @@ interface IMessageData{
 
   private handleCreate(event:any){
     event.preventDefault();
-    let url = 'http://localhost:8080/AgentTechnology/rest/agents/running/'+this.state.createInstanceClass+'/'+this.state.createInstanceName;
+    let url = window.location.href+'rest/agents/running/'+this.state.createInstanceClass+'/'+this.state.createInstanceName;
     axios.post(url);
   }
 
   private handleDelete(agentClass: string, agentName: string){
-    let url = 'http://localhost:8080/AgentTechnology/rest/agents/running/'+agentClass+'/'+agentName;
+    let url = window.location.href+'rest/agents/running/'+agentClass+'/'+agentName;
     axios.delete(url);
   }
 
   private handleSendMessage(event:any){
     event.preventDefault();
-    let url = 'http://localhost:8080/AgentTechnology/rest/messages';
+    let url = window.location.href+'rest/messages';
 
     let sender = this.state.runningAgents[Number(this.state.sender)];
     let reciever = this.state.runningAgents[Number(this.state.reciever)];
@@ -275,7 +282,9 @@ interface IMessageData{
           <option>{item}</option>
       ))}
         </select>
+        &emsp;
         <input placeholder="Enter instance name..." value={this.state.createInstanceName} onChange={this.handleCreateInstanceNameChange}></input>
+        &emsp;
         <input type="submit" value="Submit" disabled={this.state.createInstanceClass.trim() ==="" || this.state.createInstanceName.trim() ===""}></input>
       </form> 
       </div>     
@@ -286,7 +295,9 @@ interface IMessageData{
           {this.state.runningAgents.map(item =>(
             <tr>
               <td>{item.aid.name}</td>
+              {item.aid.host.address == window.location.host &&
               <td><button onClick={() => this.handleDelete(item.aid.type.name, item.aid.name)}>Delete</button></td>
+              }
             </tr>
           ))}
         </tbody>
@@ -300,7 +311,9 @@ interface IMessageData{
       <td>Sender: </td>
       <td><input type="checkbox" checked={this.state.senderRequired} onChange={this.handleSenderRequiredChange}></input>
       <select value={this.state.sender} onChange={this.handleSenderChange} disabled={!this.state.senderRequired}>
-        {this.state.runningAgents.map((item,index) => (
+        {(this.state.runningAgents.filter((runningAgent) =>
+          runningAgent.aid.host.address == window.location.host))
+          .map((item,index) => (
           <option value ={index}>{item.aid.name}</option>
       ))}
         </select>
@@ -338,6 +351,16 @@ interface IMessageData{
       </table>
       </form>
       <br/>
+      <h1>Logs</h1>
+      <div style={{ marginLeft:"3em"}}>
+        <button onClick={this.clearLogs}>Clear</button>
+        <div style={{ paddingLeft: "1em", paddingRight:"1em", paddingTop:"1em", paddingBottom:"1em", height: "6.5em", marginTop:"1em", overflowY:"scroll", border: "solid", borderWidth:"0.01em"}}>
+        {this.state.logs.map(item =>(
+          <p>{item}</p>
+        ))}
+        </div>
+      </div>
+      <br/>
       <h1>Search results</h1>
       <table style={{marginLeft:"3em"}}>
         <tbody>
@@ -353,16 +376,6 @@ interface IMessageData{
         ))}
         </tbody>
       </table> 
-      <br/>
-      <h1>Logs</h1>
-      <div style={{ marginLeft:"3em", height: "6.5em", overflowY:"scroll"}}>
-        <button onClick={this.clearLogs}>Clear</button>
-        <ul>
-        {this.state.logs.map(item =>(
-          <li>{item}</li>
-        ))}
-        </ul>
-      </div>
       </div>
      )
    }
