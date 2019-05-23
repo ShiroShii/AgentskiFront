@@ -110,6 +110,7 @@ interface IMessageData{
     this.handleMessageChange = this.handleMessageChange.bind(this);
     this.handleCreate = this.handleCreate.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
+    this.clearLogs = this.clearLogs.bind(this);
   }
 
 
@@ -257,10 +258,17 @@ interface IMessageData{
     })
   }
 
+  private clearLogs(event: any) {
+    this.setState({
+        logs: []
+    })
+  }
+
    public render(){
      return (
-       <div>       
+      <div style={{ width: "50em", marginLeft:"auto", marginRight:"auto"}}>       
       <h1>Classes</h1>
+      <div style={{marginLeft:"3em"}}>
       <form onSubmit={this.handleCreate}>
         <select value={this.state.createInstanceClass} onChange={this.handleCreateInstanceClassChange}>
         {this.state.classes.map((item) => (
@@ -269,10 +277,11 @@ interface IMessageData{
         </select>
         <input placeholder="Enter instance name..." value={this.state.createInstanceName} onChange={this.handleCreateInstanceNameChange}></input>
         <input type="submit" value="Submit" disabled={this.state.createInstanceClass.trim() ==="" || this.state.createInstanceName.trim() ===""}></input>
-      </form>      
+      </form> 
+      </div>     
       <br/>
       <h1>Running Agents</h1>
-      <table>
+      <table style={{marginLeft:"3em", borderSpacing: "0.5em"}}>
         <tbody>
           {this.state.runningAgents.map(item =>(
             <tr>
@@ -285,42 +294,60 @@ interface IMessageData{
       <br/>
       <h1>Messages</h1>
       <form onSubmit={this.handleSendMessage}>
-      <label>Sender: </label>
-      <input type="checkbox" checked={this.state.senderRequired} onChange={this.handleSenderRequiredChange}></input>
+      <table style={{marginLeft:"3em", borderSpacing: "0.5em"}}>
+      <tbody>
+        <tr>
+      <td>Sender: </td>
+      <td><input type="checkbox" checked={this.state.senderRequired} onChange={this.handleSenderRequiredChange}></input>
       <select value={this.state.sender} onChange={this.handleSenderChange} disabled={!this.state.senderRequired}>
         {this.state.runningAgents.map((item,index) => (
           <option value ={index}>{item.aid.name}</option>
       ))}
         </select>
-        <br/>
-        <label>Reciever: </label>
-        <select value={this.state.reciever} onChange={this.handleRecieverChange}>
+        </td>
+        </tr>
+        <tr>
+        <td>Reciever: </td>
+        <td> &emsp; <select value={this.state.reciever} onChange={this.handleRecieverChange}>
         {this.state.runningAgents.map((item,index) => (
           <option value ={index}>{item.aid.name}</option>
       ))}
         </select>
-        <br/>
-        <label>Message type: </label>
-        <select value={this.state.selectedMessageType} onChange={this.handleSelectedMessageTypeChange}>
+        </td>
+        </tr>
+        <tr>
+        <td>Message type: </td>
+        <td> &emsp; <select value={this.state.selectedMessageType} onChange={this.handleSelectedMessageTypeChange}>
         {this.state.messageTypes.map(item => (
           <option>{item}</option>
       ))}
         </select>
-        <br/>
-        <label>Message: </label>        
+        </td>
+        </tr>
+        <tr>
+        <td>Message: </td>        
+        <td>
         <input type="checkbox" checked={this.state.messageRequired} onChange={this.handleMessageRequiredChange}></input> 
         <input placeholder="Enter message..." value={this.state.message} onChange={this.handleMessageChange} disabled={!this.state.messageRequired}></input>
+        </td>
+        </tr>
+        <tr>
         <input type="submit" value="Submit" disabled={(this.state.sender.trim()==="" && this.state.senderRequired === true) || this.state.reciever.trim()==="" || (this.state.message.trim() ==="" && this.state.messageRequired === true) || this.state.selectedMessageType.trim() ===""}></input>
+        </tr>
+      </tbody>
+      </table>
       </form>
       <br/>
       <h1>Search results</h1>
-      <table>
+      <table style={{marginLeft:"3em"}}>
         <tbody>
         {this.state.searchResults.map(item =>(
           <tr style={{backgroundColor:"#ACF3D3"}}>
-                <p style={{float : "left"}}>{item.name}</p>
-                <p style={{float : "right"}}>{item.url}</p>
-                <p style={{float : "left"}}>{item.description}</p>
+            <div>
+              <p style={{float : "left"}}>{item.name}</p>
+              <p style={{float : "right"}}><a href={item.url}>{item.url}</a></p>
+            </div>
+              <p style={{float:"left", clear:"both"}}>{item.description}</p>
             <br/>
           </tr>
         ))}
@@ -328,12 +355,15 @@ interface IMessageData{
       </table> 
       <br/>
       <h1>Logs</h1>
-      <ul>
-      {this.state.logs.map(item =>(
-        <li>{item}</li>
-      ))}
-      </ul>
-       </div>
+      <div style={{ marginLeft:"3em", height: "6.5em", overflowY:"scroll"}}>
+        <button onClick={this.clearLogs}>Clear</button>
+        <ul>
+        {this.state.logs.map(item =>(
+          <li>{item}</li>
+        ))}
+        </ul>
+      </div>
+      </div>
      )
    }
 }
