@@ -11,6 +11,7 @@ interface IAgentState{
   classes: string[];
   classesSocket: WebSocket;
   runningAgents: AgentWrapper[];
+  localRunningAgents: AgentWrapper[];
   runningAgentsSocket: WebSocket;
   searchResultsSocket: WebSocket;
   logs: string [];
@@ -43,6 +44,7 @@ interface IMessageData{
       classes : [],
       classesSocket: new WebSocket('ws://'+this.getHostAddress()+'refreshAgentClasses'),
       runningAgents : [],
+      localRunningAgents : [],
       runningAgentsSocket : new WebSocket('ws://'+this.getHostAddress()+'refreshRunningAgents'),
       logs : [],
       loggerSocket : new WebSocket('ws://'+this.getHostAddress()+'logger'),
@@ -75,16 +77,31 @@ interface IMessageData{
       	runningAgents : JSON.parse(evt.data).list
       })
 
-      if(this.state.runningAgents.length > 0){
+      this.setState(
+      {
+        localRunningAgents: (this.state.runningAgents.filter((runningAgent) =>
+          runningAgent.aid.host.address === window.location.host))
+        })
+
+        if(this.state.runningAgents.length > 0){
+          this.setState({
+            reciever : '0'
+          })
+        }
+        else{
+          this.setState({
+            reciever : '',
+          })
+        }
+
+      if(this.state.localRunningAgents.length > 0){
         this.setState({
-          sender : '0',
-          reciever : '0',
+          sender : '0'
         })
       }
       else{
         this.setState({
-          sender : '',
-          reciever : '',
+          sender : ''
         })
       }
     }
@@ -167,18 +184,33 @@ interface IMessageData{
                 this.setState({
                   runningAgents: res.data.list
         });
-        if(this.state.runningAgents.length > 0){
-          this.setState({
-            sender : '0',
-            reciever : '0',
-          })
-        }      
-        else{
-          this.setState({
-            sender : '',
-            reciever : '',
-          })
-        }
+        this.setState(
+          {
+            localRunningAgents: (this.state.runningAgents.filter((runningAgent) =>
+              runningAgent.aid.host.address === window.location.host))
+            })
+    
+            if(this.state.runningAgents.length > 0){
+              this.setState({
+                reciever : '0'
+              })
+            }
+            else{
+              this.setState({
+                reciever : '',
+              })
+            }
+    
+          if(this.state.localRunningAgents.length > 0){
+            this.setState({
+              sender : '0'
+            })
+          }
+          else{
+            this.setState({
+              sender : ''
+            })
+          }
     })
   }
 
@@ -197,7 +229,7 @@ interface IMessageData{
     event.preventDefault();
     let url = window.location.href+'rest/messages';
 
-    let sender = this.state.runningAgents[Number(this.state.sender)];
+    let sender = this.state.localRunningAgents[Number(this.state.sender)];
     let reciever = this.state.runningAgents[Number(this.state.reciever)];
     var data : IMessageData;
     data = {
@@ -243,7 +275,7 @@ interface IMessageData{
 
   private handleSenderChange(event: any) {
     this.setState({
-        sender: event.target.value
+        sender: event.targsenet.value
     })
   }
 
@@ -295,9 +327,7 @@ interface IMessageData{
           {this.state.runningAgents.map(item =>(
             <tr>
               <td>{item.aid.name}</td>
-              {item.aid.host.address == window.location.host &&
               <td><button onClick={() => this.handleDelete(item.aid.type.name, item.aid.name)}>Delete</button></td>
-              }
             </tr>
           ))}
         </tbody>
@@ -311,9 +341,7 @@ interface IMessageData{
       <td>Sender: </td>
       <td><input type="checkbox" checked={this.state.senderRequired} onChange={this.handleSenderRequiredChange}></input>
       <select value={this.state.sender} onChange={this.handleSenderChange} disabled={!this.state.senderRequired}>
-        {(this.state.runningAgents.filter((runningAgent) =>
-          runningAgent.aid.host.address == window.location.host))
-          .map((item,index) => (
+        {this.state.localRunningAgents.map((item,index) => (
           <option value ={index}>{item.aid.name}</option>
       ))}
         </select>
